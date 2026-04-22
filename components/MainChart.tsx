@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import type { Point } from "@/lib/data";
-import { useChatBridge } from "./ChatContext";
+import { ExplainButton } from "./ExplainButton";
 
 function formatNum(n: number) {
   return new Intl.NumberFormat("es-CO").format(n);
@@ -56,7 +56,6 @@ const BUCKET_LABEL: Record<number, string> = {
 };
 
 export function MainChart({ points, date }: { points: Point[]; date: string }) {
-  const { sendToChat } = useChatBridge();
   const [bucket, setBucket] = useState(60);
   const [range, setRange] = useState<[string, string]>([
     points[0].t,
@@ -133,18 +132,13 @@ export function MainChart({ points, date }: { points: Point[]; date: string }) {
             {title}
           </h2>
           <p className="mt-1 text-sm text-zinc-400">{subtitle}</p>
-          {!isFullDay && (
-            <button
-              onClick={() =>
-                sendToChat(
-                  `Analiza el tramo entre ${range[0]} y ${range[1]} y compáralo con el resto del día: ¿cómo se ve contra el promedio general, hubo caídas o subidas destacables, y qué momento marca la diferencia en ese rango?`,
-                )
-              }
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-rappi-red/40 bg-rappi-red/10 px-3 py-1 text-xs font-medium text-rappi-red transition hover:border-rappi-red hover:bg-rappi-red/20"
-            >
-              ✨ Explicar con AI
-            </button>
-          )}
+          <ExplainButton
+            prompt={
+              isFullDay
+                ? `Resume el día ${date}: pico, valle, forma de la curva, caídas o subidas destacables, y cómo se compara con el promedio de los otros días disponibles.`
+                : `Analiza el tramo entre ${range[0]} y ${range[1]} del día ${date} y compáralo con el resto del día: ¿cómo se ve contra el promedio general, hubo caídas o subidas destacables, y qué momento marca la diferencia en ese rango?`
+            }
+          />
         </div>
       </div>
 
