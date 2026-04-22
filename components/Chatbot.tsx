@@ -6,6 +6,47 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useChatBridge } from "./ChatContext";
 
+function truncateJSON(value: unknown, max = 240): string {
+  const s = JSON.stringify(value);
+  return s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
+function ToolTrace({ type, input, output }: { type: string; input: unknown; output: unknown }) {
+  const [open, setOpen] = useState(false);
+  const hasInput = input !== undefined && input !== null;
+  const hasOutput = output !== undefined && output !== null;
+  const hasData = hasInput || hasOutput;
+  return (
+    <details
+      open={open}
+      onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
+      className="group rounded-md border border-rappi-amber/40 bg-rappi-amber/10 open:bg-rappi-amber/15"
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-1 px-2 py-0.5 font-mono text-[10px] text-rappi-amber hover:text-rappi-amber/90">
+        <span className="transition group-open:rotate-90">▸</span>
+        🔧 {type.replace("tool-", "")}
+        {!hasData && <span className="ml-1 text-zinc-500">(sin datos)</span>}
+      </summary>
+      {open && hasData && (
+        <div className="border-t border-rappi-amber/20 px-2 py-1.5 font-mono text-[10px] text-zinc-300">
+          {hasInput && (
+            <div className="break-all">
+              <span className="text-zinc-500">input: </span>
+              <span className="text-zinc-200">{truncateJSON(input)}</span>
+            </div>
+          )}
+          {hasOutput && (
+            <div className="mt-1 break-all">
+              <span className="text-zinc-500">output: </span>
+              <span className="text-zinc-200">{truncateJSON(output)}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </details>
+  );
+}
+
 const SUGGESTIONS_DAY = [
   "¿A qué hora fue el pico del día?",
   "Compara las 10 AM vs las 4 PM",
@@ -145,14 +186,14 @@ export function Chatbot() {
                   }`}
                 >
                   {toolCalls.length > 0 && (
-                    <div className="mb-2 flex flex-wrap gap-1">
+                    <div className="mb-2 flex flex-col gap-1">
                       {toolCalls.map((tc, i) => (
-                        <span
+                        <ToolTrace
                           key={i}
-                          className="rounded-md border border-rappi-amber/40 bg-rappi-amber/10 px-2 py-0.5 font-mono text-[10px] text-rappi-amber"
-                        >
-                          🔧 {tc.type.replace("tool-", "")}
-                        </span>
+                          type={tc.type}
+                          input={"input" in tc ? tc.input : undefined}
+                          output={"output" in tc ? tc.output : undefined}
+                        />
                       ))}
                     </div>
                   )}
