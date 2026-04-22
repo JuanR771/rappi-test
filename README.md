@@ -6,31 +6,10 @@ Prueba técnica **RappiMakers 2026**. Dashboard web con chatbot AI sobre la mét
 
 - **Next.js 16** (App Router) — frontend + API routes en un solo proceso.
 - **Tailwind 4** + componentes custom (dark mode por defecto).
-- **Recharts** para los gráficos.
-- **Vercel AI SDK 6** con **Gemini 2.0 Flash** (fallback a **Groq Llama 3.3 70B**).
+- **Recharts** para los gráficos · **Framer Motion** para animaciones sutiles.
+- **Vercel AI SDK 6** con **Gemini 2.5 Flash** (fallback automático a **Groq Llama 3.3 70B**).
 - **Tool-calling** (no RAG) — el LLM consulta el dataset vía funciones tipadas con Zod.
 - **TypeScript** estricto.
-
-## Arquitectura
-
-```
-┌── Cliente (navegador) ─────────────────────────────┐
-│  Dashboard (Server Component) + Chatbot UI        │
-└────────────────┬───────────────────────────────────┘
-                 │ HTTP + SSE
-                 ▼
-┌── Next.js Server (localhost:3000) ─────────────────┐
-│  /api/chat  ──► streamText + tools  ──► Gemini API │
-│  /          ──► sirve HTML + stats.json            │
-│  lib/tools.ts  (getValueAt, rangeStats,            │
-│                 topMoments, compareHours, ...)     │
-└────────────────▲───────────────────────────────────┘
-                 │
-┌── scripts/prepare-data.ts (offline, 1 vez) ────────┐
-│  201 CSVs ─► consolida ─► availability.json        │
-│              (MAX por timestamp)  + stats.json     │
-└────────────────────────────────────────────────────┘
-```
 
 ## Setup
 
@@ -38,51 +17,57 @@ Prueba técnica **RappiMakers 2026**. Dashboard web con chatbot AI sobre la mét
 # 1. Instalar
 npm install
 
-# 2. Crear API key de Gemini (gratis, sin tarjeta)
-#    https://aistudio.google.com/apikey
+# 2. Ingresar API key de Gemini
 echo 'GOOGLE_GENERATIVE_AI_API_KEY=tu_api_key_aqui' > .env.local
 
-# 3. (Opcional) Para usar Groq en vez de Gemini:
-# echo 'LLM_PROVIDER=groq' >> .env.local
+# 3. (Opcional) Fallback a Groq ante rate-limits de Gemini:
 # echo 'GROQ_API_KEY=tu_groq_key' >> .env.local
 
-# 4. Regenerar los JSON de datos (ya existen, esto solo si cambias el zip)
-npx tsx scripts/prepare-data.ts
-
-# 5. Correr
+# 4. Correr
 npm run dev
 # → http://localhost:3000
 ```
 
-## Decisiones clave (para la presentación)
-
-1. **Tool-calling vs RAG**: el dataset es numérico-temporal, no texto. Tools deterministas (`getRangeStats`, `topMoments`, etc.) son más precisas y auditables que embeddings.
-2. **Pipeline offline**: los 201 CSVs se consolidan **una sola vez** en `prepare-data.ts` → `availability.json` (6452 puntos). La app nunca re-parsea CSVs en runtime.
-3. **MAX por timestamp**: los CSVs son ~10 snapshots por hora con pequeñas diferencias (late-arriving data de Splunk). Tomar el MAX equivale al snapshot más completo.
-4. **Gemini 2.0 Flash**: gratis, 1M tokens de contexto, tool-calling confiable. Fallback a Groq via env var.
-5. **Monolito Next.js**: un solo proceso, un solo `npm run dev`. Sin complejidad de microservicios.
+Los JSONs pre-agregados ya están commiteados en `public/data/`, así que no hace falta regenerarlos para correr la app.
 
 ## El dataset
 
 - **Métrica única**: `synthetic_monitoring_visible_stores` (plot name: `NOW`).
-- **Día**: 2026-02-01 (domingo).
-- **Cobertura**: 06:11:20 → 00:06:30 (hora Colombia) cada 10s → **6452 puntos únicos**.
-- **Pico**: 6.198.472 a las 16:01:10.
-- **Valle**: 82 a las 06:11:20.
-- **Forma**: campana con arranque de día, pico al final de la tarde, declive nocturno.
+- **Cobertura**: **11 días** (2026-02-01 → 2026-02-11, hora Colombia) · snapshot cada 10s.
+- **Puntos únicos**: ~67.000 a lo largo de los 11 días (después de consolidar duplicados).
+- **Pico global**: **6.198.472 tiendas** el viernes **2026-02-06 a las 16:01:10**.
+- **Valle**: varios días tocan 0 al inicio (06:11:20).
+- **Patrón semanal**: la media diaria sube de lunes a viernes (2.62M → 3.72M) y cae el fin de semana (domingo ≈ 2.74M).
+- **Día parcial**: el 11-02 tiene cobertura solo hasta 15:00. El pipeline lo marca `partial: true` y el dashboard lo destaca.
 
-Cada CSV cubre ~1 hora (~363 columnas de tiempo) en formato "wide". El script `prepare-data.ts` pivota a formato long `(timestamp, value)`, consolida snapshots y precalcula agregados.
+Los CSVs vienen en formato "wide" (~360 columnas de tiempo, ~1 hora por archivo). El script `prepare-data.ts` los pivota a formato long `(timestamp, value)`, los segmenta por fecha Bogotá (UTC-5), toma el **MAX por timestamp** para resolver snapshots solapados de Splunk, y precalcula agregados por día más agregados globales multi-día.
 
 ## Tools del chatbot
 
+13 tools deterministas, todas tipadas con Zod (input y output). El LLM nunca inventa números: los pide a estas funciones.
+
+### Multi-día
+
 | Tool | Uso |
 |---|---|
-| `getValueAt(time)` | Valor en un timestamp específico |
-| `getRangeStats(from, to)` | Min/max/avg en un rango horario |
-| `getTopMoments(n)` | Los N picos del día |
-| `compareHoursTool(a, b)` | Compara dos horas |
-| `biggestDropsTool(n)` | Las N caídas más grandes |
-| `biggestRisesTool(n)` | Las N subidas más grandes |
+| `listAvailableDays` | Lista los 11 días con su resumen (pico, valle, avg) |
+| `getDailySummary(day)` | Resumen completo de un día específico |
+| `compareDays(dayA, dayB)` | Compara dos días: diferencia absoluta y % en pico, valle y avg |
+| `hourAcrossDays(hour)` | Cómo estuvo una hora a lo largo de todos los días |
+
+### Dentro de un día
+
+| Tool | Uso |
+|---|---|
+| `getValueAt(time, day)` | Valor en un timestamp específico |
+| `getRangeStats(from, to, day)` | Min/max/avg en un rango horario |
+| `getTopMoments(n, day)` | Los N picos del día |
+| `getHourlyAverage(hour, day)` | Avg/mediana/pico/valle de una hora completa |
+| `compareHoursTool(hourA, hourB, day)` | Compara dos horas del mismo día |
+| `describeRangeTool(from, to, day)` | Tendencia, delta y % de cambio en un rango |
+| `biggestDropsTool(n, day)` | Las N caídas consecutivas más grandes |
+| `biggestRisesTool(n, day)` | Las N subidas consecutivas más grandes |
+| `findAnomaliesTool(sigma, day)` | Puntos anómalos (outliers a >N sigmas) |
 
 ## Estructura
 
@@ -90,29 +75,41 @@ Cada CSV cubre ~1 hora (~363 columnas de tiempo) en formato "wide". El script `p
 rappi-test/
 ├── app/
 │   ├── page.tsx                # Dashboard (server component)
-│   ├── api/chat/route.ts       # streamText + tools
+│   ├── api/chat/route.ts       # streamText + tools + SSE + fallback
+│   ├── api/day/[date]/route.ts # Carga lazy del día seleccionado
 │   └── layout.tsx
 ├── components/
-│   ├── KpiCards.tsx            # 4 KPIs
-│   ├── MainChart.tsx           # AreaChart + filtros
+│   ├── DashboardSwitcher.tsx   # Tabs overall + por día
+│   ├── OverallKpis.tsx         # KPIs multi-día
+│   ├── KpiCards.tsx            # KPIs por día
+│   ├── MultiDayChart.tsx       # AreaChart de los 11 días
+│   ├── MainChart.tsx           # AreaChart por día con filtros
+│   ├── DailyBars.tsx           # BarChart comparando días
 │   ├── HourlyBars.tsx          # BarChart por hora
-│   ├── Heatmap.tsx             # grid de intensidad
-│   ├── TopMoments.tsx          # tabla top-5
-│   └── Chatbot.tsx             # UI del chat (useChat)
+│   ├── Heatmap.tsx             # Grid multi-día
+│   ├── DayHeatmap.tsx          # Grid por día
+│   ├── TopMoments.tsx          # Tabla top-N
+│   ├── ExplainButton.tsx       # Botón "Explicar con AI" compartido
+│   ├── ChatContext.tsx         # Bridge charts ↔ chatbot
+│   └── Chatbot.tsx             # UI del chat (useChat) + tool-trace expandible
 ├── lib/
-│   ├── data.ts                 # loaders con cache
-│   ├── stats.ts                # agregados, resample
-│   └── tools.ts                # tools Zod-tipadas
+│   ├── data.ts                 # Loaders con caché a nivel de módulo
+│   ├── stats.ts                # Agregados puros (sin deps de React)
+│   └── tools.ts                # 13 tools Zod-tipadas
 ├── scripts/
-│   └── prepare-data.ts         # pipeline offline
+│   └── prepare-data.ts         # Pipeline offline (segmenta + MAX + agrega)
 ├── public/data/
-│   ├── availability.json       # 6452 puntos
-│   └── stats.json              # agregados
-└── data/raw/                   # 201 CSVs originales (gitignored)
+│   ├── index.json              # Metadata de los 11 días
+│   ├── overall.json            # Agregado multi-día (pico global, avg, etc.)
+│   └── days/<date>/
+│       ├── availability.json   # Puntos del día
+│       └── stats.json          # Agregados del día
+└── data/raw/                   # CSVs originales (gitignored)
 ```
 
 ## Uso de AI en el proceso de desarrollo
 
-- **Claude Code** para explorar el dataset, diseñar la arquitectura y generar el boilerplate de componentes.
-- **Claude Opus** para decisiones de diseño (tool-calling vs RAG, stack, trade-offs).
-- **Gemini 2.0 Flash** como motor del chatbot en runtime.
+- **Claude Opus** para decisiones de diseño (tool-calling vs RAG, MAX por timestamp, monolito vs microservicios, stack).
+- **Claude Code** para explorar el dataset, refactorizar y generar boilerplate de componentes.
+- **Gemini 2.5 Flash** como motor del chatbot en runtime (con fallback a Groq Llama 3.3 70B ante 429).
+- **Skills `/security-review` y `/simplify`** como pasada final pre-entrega sobre los cambios.
