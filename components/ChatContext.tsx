@@ -8,13 +8,29 @@ type ChatCtx = {
   consumePending: () => void;
   registerChatRef: (el: HTMLElement | null) => void;
   scrollToChat: () => void;
+  activeDay: string;
+  setActiveDay: (day: string) => void;
+  activeDayRef: { current: string };
 };
 
 const Ctx = createContext<ChatCtx | null>(null);
 
-export function ChatProvider({ children }: { children: ReactNode }) {
+export function ChatProvider({
+  children,
+  initialDay = "overall",
+}: {
+  children: ReactNode;
+  initialDay?: string;
+}) {
   const [pending, setPending] = useState<string | null>(null);
+  const [activeDay, setActiveDayState] = useState(initialDay);
   const chatRef = useRef<HTMLElement | null>(null);
+  const activeDayRef = useRef(initialDay);
+
+  const setActiveDay = (day: string) => {
+    activeDayRef.current = day;
+    setActiveDayState(day);
+  };
 
   const value: ChatCtx = {
     pending,
@@ -29,6 +45,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     scrollToChat: () => {
       chatRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     },
+    activeDay,
+    setActiveDay,
+    activeDayRef,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

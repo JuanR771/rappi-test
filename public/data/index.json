@@ -1,0 +1,238 @@
+{
+  "metric": "synthetic_monitoring_visible_stores",
+  "description": "Número de tiendas visibles reportado por monitoreo sintético de Rappi (snapshot cada 10s).",
+  "granularitySec": 10,
+  "days": [
+    {
+      "date": "2026-02-01",
+      "weekday": "Dom",
+      "totalPoints": 6412,
+      "coverage": {
+        "first": "06:11:20",
+        "last": "23:59:50"
+      },
+      "avg": 3022546,
+      "peak": {
+        "t": "17:01:00",
+        "ts": 1769983260000,
+        "v": 5280107
+      },
+      "valley": {
+        "t": "06:11:20",
+        "ts": 1769944280000,
+        "v": 37
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-02",
+      "weekday": "Lun",
+      "totalPoints": 6399,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 2620567,
+      "peak": {
+        "t": "15:21:00",
+        "ts": 1770063660000,
+        "v": 4554582
+      },
+      "valley": {
+        "t": "06:11:20",
+        "ts": 1770030680000,
+        "v": 28
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-03",
+      "weekday": "Mar",
+      "totalPoints": 6413,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 3379388,
+      "peak": {
+        "t": "15:52:30",
+        "ts": 1770151950000,
+        "v": 5708166
+      },
+      "valley": {
+        "t": "06:11:20",
+        "ts": 1770117080000,
+        "v": 0
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-04",
+      "weekday": "Mié",
+      "totalPoints": 6451,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 3524982,
+      "peak": {
+        "t": "15:43:20",
+        "ts": 1770237800000,
+        "v": 5917626
+      },
+      "valley": {
+        "t": "06:11:20",
+        "ts": 1770203480000,
+        "v": 0
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-05",
+      "weekday": "Jue",
+      "totalPoints": 6413,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 3663628,
+      "peak": {
+        "t": "16:01:10",
+        "ts": 1770325270000,
+        "v": 6107574
+      },
+      "valley": {
+        "t": "06:11:20",
+        "ts": 1770289880000,
+        "v": 0
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-06",
+      "weekday": "Vie",
+      "totalPoints": 6429,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 3722633,
+      "peak": {
+        "t": "16:01:10",
+        "ts": 1770411670000,
+        "v": 6198472
+      },
+      "valley": {
+        "t": "00:06:30",
+        "ts": 1770354390000,
+        "v": 0
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-07",
+      "weekday": "Sáb",
+      "totalPoints": 6450,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 3480623,
+      "peak": {
+        "t": "15:43:10",
+        "ts": 1770496990000,
+        "v": 5738300
+      },
+      "valley": {
+        "t": "06:11:30",
+        "ts": 1770462690000,
+        "v": 155
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-08",
+      "weekday": "Dom",
+      "totalPoints": 6093,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 2741441,
+      "peak": {
+        "t": "15:31:10",
+        "ts": 1770582670000,
+        "v": 4969210
+      },
+      "valley": {
+        "t": "06:11:30",
+        "ts": 1770549090000,
+        "v": 101
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-09",
+      "weekday": "Lun",
+      "totalPoints": 6432,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 3067439,
+      "peak": {
+        "t": "16:44:00",
+        "ts": 1770673440000,
+        "v": 5122526
+      },
+      "valley": {
+        "t": "06:11:20",
+        "ts": 1770635480000,
+        "v": 22
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-10",
+      "weekday": "Mar",
+      "totalPoints": 6436,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "23:59:50"
+      },
+      "avg": 3209286,
+      "peak": {
+        "t": "15:18:40",
+        "ts": 1770754720000,
+        "v": 5767000
+      },
+      "valley": {
+        "t": "00:06:30",
+        "ts": 1770699990000,
+        "v": 0
+      },
+      "partial": false
+    },
+    {
+      "date": "2026-02-11",
+      "weekday": "Mié",
+      "totalPoints": 3213,
+      "coverage": {
+        "first": "00:00:00",
+        "last": "15:00:00"
+      },
+      "avg": 2462669,
+      "peak": {
+        "t": "14:45:40",
+        "ts": 1770839140000,
+        "v": 5710374
+      },
+      "valley": {
+        "t": "06:11:20",
+        "ts": 1770808280000,
+        "v": 82
+      },
+      "partial": true
+    }
+  ]
+}

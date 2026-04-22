@@ -6,28 +6,48 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useChatBridge } from "./ChatContext";
 
-const SUGGESTIONS = [
+const SUGGESTIONS_DAY = [
   "¿A qué hora fue el pico del día?",
   "Compara las 10 AM vs las 4 PM",
   "¿Cuál fue la caída más brusca?",
   "¿Qué pasó entre las 14:00 y las 16:00?",
 ];
+const SUGGESTIONS_OVERALL = [
+  "¿Qué día tuvo el pico más alto?",
+  "Compara el lunes 2 vs el sábado 7",
+  "¿Cómo estuvo la hora 16 durante la semana?",
+  "Resumen de los 11 días",
+];
 
-const QUICK_CHIPS = [
+const QUICK_CHIPS_DAY = [
   "¿Pico del día?",
   "¿Caída más brusca?",
   "Compara 10 AM vs 4 PM",
   "¿Hubo anomalías?",
   "¿Cómo estuvo la tarde?",
 ];
+const QUICK_CHIPS_OVERALL = [
+  "¿Día con mayor pico?",
+  "¿Día más flojo?",
+  "Hora 16 durante la semana",
+  "Lista de días disponibles",
+];
 
 export function Chatbot() {
-  const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
-  });
+  const { pending, consumePending, registerChatRef, activeDay, activeDayRef } = useChatBridge();
+  const transport = useRef(
+    new DefaultChatTransport({
+      api: "/api/chat",
+      body: () => ({ day: activeDayRef.current }),
+    }),
+  ).current;
+  const { messages, sendMessage, status, error } = useChat({ transport });
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { pending, consumePending, registerChatRef } = useChatBridge();
+  const isOverall = activeDay === "overall";
+  const focusLabel = isOverall ? "Vista general (11 días)" : `Día ${activeDay}`;
+  const suggestions = isOverall ? SUGGESTIONS_OVERALL : SUGGESTIONS_DAY;
+  const quickChips = isOverall ? QUICK_CHIPS_OVERALL : QUICK_CHIPS_DAY;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -58,7 +78,10 @@ export function Chatbot() {
         <h2 className="text-base font-bold text-zinc-100 sm:text-lg">
           💬 Asistente de datos
         </h2>
-        <span className="ml-auto text-[10px] text-zinc-500 sm:text-xs">Gemini 2.5 Flash · Groq fallback</span>
+        <span className="ml-2 rounded-full border border-rappi-amber/40 bg-rappi-amber/10 px-2 py-0.5 text-[10px] text-rappi-amber sm:text-xs">
+          Hablando sobre: {focusLabel}
+        </span>
+        <span className="ml-auto hidden text-[10px] text-zinc-500 sm:inline sm:text-xs">Gemini 2.5 Flash · Groq fallback</span>
       </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
@@ -78,10 +101,12 @@ export function Chatbot() {
               🤖
             </motion.div>
             <p className="text-sm text-zinc-400">
-              Pregúntame lo que quieras sobre los datos del día.
+              {isOverall
+                ? "Pregúntame sobre cualquier día o compara entre días."
+                : `Pregúntame sobre los datos del ${activeDay}.`}
             </p>
             <div className="flex flex-wrap justify-center gap-2">
-              {SUGGESTIONS.map((s, i) => (
+              {suggestions.map((s, i) => (
                 <motion.button
                   key={s}
                   initial={{ opacity: 0, y: 8 }}
@@ -167,7 +192,7 @@ export function Chatbot() {
 
       {messages.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto border-t border-zinc-800 px-3 pt-2 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {QUICK_CHIPS.map((q) => (
+          {quickChips.map((q) => (
             <button
               key={q}
               onClick={() => submit(q)}

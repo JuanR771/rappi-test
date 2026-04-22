@@ -1,8 +1,8 @@
 import { google } from "@ai-sdk/google";
 import { groq } from "@ai-sdk/groq";
 import { convertToModelMessages, streamText, stepCountIs } from "ai";
-import { loadStats } from "@/lib/data";
-import { dataTools } from "@/lib/tools";
+import { loadIndex, loadOverall, loadStats } from "@/lib/data";
+import { buildDataTools } from "@/lib/tools";
 
 export const runtime = "nodejs";
 
@@ -28,38 +28,66 @@ function getFallbackModel() {
   return null;
 }
 
-function buildSystem(stats: ReturnType<typeof loadStats>) {
-  const fmt = (n: number) => n.toLocaleString("es-CO");
-  return `Eres un analista de datos conciso que responde en español sobre la métrica de Rappi "synthetic_monitoring_visible_stores" (número de tiendas visibles reportado por monitoreo sintético) del día 2026-02-01.
+function fmt(n: number) {
+  return n.toLocaleString("es-CO");
+}
 
-Contexto del dataset:
-- Día: ${stats.date}
-- Cobertura: ${stats.coverage.first} → ${stats.coverage.last} (hora Colombia)
-- Granularidad: cada ${stats.granularitySec}s
-- Total de puntos: ${stats.totalPoints}
-- Pico del día: ${fmt(stats.peak.v)} a las ${stats.peak.t}
-- Valle: ${fmt(stats.valley.v)} a las ${stats.valley.t}
-- Promedio: ${fmt(stats.avg)}
+function buildSystem(activeDay: string) {
+  const index = loadIndex();
+  const overall = loadOverall();
+  const daysList = index.days
+    .map(
+      (d) =>
+        `  - ${d.date} (${d.weekday})${d.partial ? " [parcial]" : ""}: peak ${fmt(
+          d.peak.v,
+        )} @ ${d.peak.t}, avg ${fmt(d.avg)}, cobertura ${d.coverage.first}–${d.coverage.last}`,
+    )
+    .join("\n");
+
+  const focus =
+    activeDay === "overall"
+      ? `Foco actual: VISTA GENERAL (los 11 días juntos). Para responder sobre un día concreto, pasa el parámetro \`day\` a las tools o recomienda al usuario que seleccione el día en el dashboard.`
+      : (() => {
+          const s = loadStats(activeDay);
+          return `Foco actual: ${s.date} (${s.weekday}). Si el usuario no especifica día, asume este día. Resumen:
+  - cobertura ${s.coverage.first}–${s.coverage.last}${s.partial ? " (PARCIAL)" : ""}
+  - pico ${fmt(s.peak.v)} @ ${s.peak.t}
+  - valle ${fmt(s.valley.v)} @ ${s.valley.t}
+  - promedio ${fmt(s.avg)}
+  - total puntos ${s.totalPoints}`;
+        })();
+
+  return `Eres un analista de datos conciso que responde en español sobre la métrica de Rappi "synthetic_monitoring_visible_stores" (número de tiendas visibles reportado por monitoreo sintético, granularidad ${overall.granularitySec}s).
+
+Dataset:
+- ${overall.totalDays} días disponibles (${index.days[0].date} → ${index.days[index.days.length - 1].date}):
+${daysList}
+- Pico global: ${fmt(overall.globalPeak.v)} @ ${overall.globalPeak.date} ${overall.globalPeak.t}
+- Valle global: ${fmt(overall.globalValley.v)} @ ${overall.globalValley.date} ${overall.globalValley.t}
+- Promedio global: ${fmt(overall.globalAvg)}
+
+${focus}
 
 Reglas:
 1. Usa SIEMPRE las tools para cualquier pregunta que requiera valores específicos, rangos, comparaciones o anomalías. NUNCA inventes números.
-2. Si la pregunta NO puede responderse con las tools disponibles o está fuera del alcance del dataset (ej. causas, tiendas específicas, otros días, datos externos), responde claramente: "No tengo datos para responder eso. Puedo ayudarte con: picos, valles, comparaciones por hora, caídas/subidas, anomalías y resúmenes de rangos."
-3. Formatea números grandes con separador de miles (ej: 6.198.472).
-4. Responde breve (máximo 3 frases) a menos que pidan detalle explícito.
-5. Responde siempre en español.
+2. Si el usuario pregunta por un día y da una fecha o referencia (ej "lunes 9", "el sábado", "ayer"), convierte a YYYY-MM-DD y pásalo en el parámetro \`day\`. Si dudas, llama primero \`listAvailableDays\`.
+3. Si el usuario no especifica día y hay foco activo, úsalo. Si el foco es "overall" y la pregunta es sobre un solo día, pide aclaración o usa \`listAvailableDays\`.
+4. Si la pregunta está fuera del alcance (causas, tiendas específicas, datos externos), responde: "No tengo datos para responder eso. Puedo ayudarte con: picos, valles, comparaciones por hora/día, caídas/subidas, anomalías y resúmenes de rangos."
+5. Formatea números grandes con separador de miles (ej: 6.198.472).
+6. Responde breve (máximo 3 frases) a menos que pidan detalle.
+7. Responde siempre en español.
 
-Ejemplos de mapeo pregunta → tool:
-- "¿a qué hora fue el pico?" → getTopMoments({ n: 1 })
-- "top 5 momentos" → getTopMoments({ n: 5 })
-- "qué pasó entre las 10 y las 12" → describeRangeTool({ from: "10:00", to: "12:00" })
-- "cómo estuvo la tarde" → describeRangeTool({ from: "12:00", to: "18:00" })
-- "cómo estuvo la hora 15" → getHourlyAverage({ hour: "15" })
+Ejemplos:
+- "¿qué día tuvo el pico más alto?" → listAvailableDays → responde con fecha y hora.
+- "compara el lunes 2 vs el sábado 7" → compareDays({ dayA: "2026-02-02", dayB: "2026-02-07" })
+- "cómo estuvo la hora 16 durante la semana" → hourAcrossDays({ hour: "16" })
+- "a qué hora fue el pico" (con foco activo) → getTopMoments({ n: 1 })
+- "top 5 momentos del 5 de feb" → getTopMoments({ n: 5, day: "2026-02-05" })
 - "compara 10 AM vs 4 PM" → compareHoursTool({ hourA: "10", hourB: "16" })
 - "caída más brusca" → biggestDropsTool({ n: 1 })
-- "subidas más fuertes" → biggestRisesTool({ n: 5 })
 - "valor a las 14:30" → getValueAt({ time: "14:30" })
 - "hubo anomalías" → findAnomaliesTool({ sigma: 2 })
-- "estadísticas entre X e Y" → getRangeStats({ from, to })`;
+- "qué pasó entre las 10 y las 12" → describeRangeTool({ from: "10:00", to: "12:00" })`;
 }
 
 function isRateLimit(err: unknown): boolean {
@@ -68,17 +96,19 @@ function isRateLimit(err: unknown): boolean {
 }
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
-  const stats = loadStats();
-  const system = buildSystem(stats);
-  const modelMessages = await convertToModelMessages(messages);
+  const body = await req.json();
+  const { messages, day } = body as { messages: unknown; day?: string };
+  const activeDay = typeof day === "string" && day.length > 0 ? day : "overall";
+  const system = buildSystem(activeDay);
+  const modelMessages = await convertToModelMessages(messages as never);
+  const tools = buildDataTools(activeDay);
 
   async function attempt(model: ReturnType<typeof getPrimaryModel>) {
     const result = streamText({
       model,
       system,
       messages: modelMessages,
-      tools: dataTools,
+      tools,
       stopWhen: stepCountIs(5),
     });
     return result.toUIMessageStreamResponse();

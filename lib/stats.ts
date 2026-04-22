@@ -24,8 +24,7 @@ export function resample(points: Point[], bucketSec: number): Point[] {
 
 function timeToSec(t: string): number {
   const [h, m, s] = t.split(":").map(Number);
-  const v = h * 3600 + m * 60 + s;
-  return h < 6 ? v + 24 * 3600 : v;
+  return h * 3600 + m * 60 + s;
 }
 
 function normalizeTime(input: string): string {

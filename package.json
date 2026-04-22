@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prepare-data": "tsx scripts/prepare-data.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.64",

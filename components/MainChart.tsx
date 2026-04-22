@@ -27,7 +27,7 @@ function formatCompact(n: number) {
 
 function timeToSec(t: string) {
   const [h, m, s] = t.split(":").map(Number);
-  return h < 6 ? (h + 24) * 3600 + m * 60 + s : h * 3600 + m * 60 + s;
+  return h * 3600 + m * 60 + s;
 }
 
 function resample(points: Point[], bucketSec: number) {
@@ -55,7 +55,7 @@ const BUCKET_LABEL: Record<number, string> = {
   600: "promediado por 10 min",
 };
 
-export function MainChart({ points }: { points: Point[] }) {
+export function MainChart({ points, date }: { points: Point[]; date: string }) {
   const { sendToChat } = useChatBridge();
   const [bucket, setBucket] = useState(60);
   const [range, setRange] = useState<[string, string]>([
@@ -87,17 +87,14 @@ export function MainChart({ points }: { points: Point[] }) {
     range[0] === points[0].t && range[1] === points[points.length - 1].t;
 
   const title = isFullDay
-    ? "Tiendas visibles durante el día 2026-02-01"
+    ? `Tiendas visibles durante el día ${date}`
     : `Tiendas visibles durante la hora ${range[0].slice(0, 2)}:00`;
 
   const subtitle = stats
     ? `Pico de ${formatCompact(stats.peak.v)} tiendas a las ${stats.peak.t} · ${BUCKET_LABEL[bucket]}`
     : "";
 
-  const hours = Array.from({ length: 19 }, (_, i) => {
-    const h = (6 + i) % 24;
-    return String(h).padStart(2, "0");
-  });
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 backdrop-blur sm:p-4">
