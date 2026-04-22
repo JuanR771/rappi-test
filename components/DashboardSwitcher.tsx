@@ -147,7 +147,7 @@ function Inner({ overall, days }: Props) {
       ) : loadedAvail ? (
         <>
           <KpiCards stats={currentStats} />
-          <MainChart key={activeDay} points={loadedAvail.points} date={activeDay} />
+          <MainChart key={loadedAvail.date} points={loadedAvail.points} date={loadedAvail.date} />
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <HourlyBars stats={currentStats} />
             <Heatmap stats={currentStats} />
