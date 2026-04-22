@@ -36,6 +36,7 @@ function points(day: string): Point[] {
 
 const DayArg = z
   .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato YYYY-MM-DD")
   .optional()
   .describe(
     "Fecha YYYY-MM-DD. Si se omite se usa el día activo del dashboard. Los días válidos están en listAvailableDays.",
