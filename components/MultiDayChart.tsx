@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import type { Overall } from "@/lib/data";
+import { ExplainButton } from "./ExplainButton";
 
 function formatNum(n: number) {
   return new Intl.NumberFormat("es-CO").format(n);
@@ -90,6 +91,9 @@ export function MultiDayChart({ overall }: { overall: Overall }) {
           <p className="mt-1 text-sm text-zinc-400">
             Pico global de {formatCompact(overall.globalPeak.v)} el {overall.globalPeak.date} a las {overall.globalPeak.t} · promedio {formatCompact(overall.globalAvg)}
           </p>
+          <ExplainButton
+            prompt={`Analiza los ${overall.totalDays} días completos (${overall.days[0]} → ${overall.days[overall.days.length - 1]}): ¿qué día tuvo el pico más alto, cómo se comparan los días laborales contra el fin de semana, y se ve algún patrón horario que se repita entre días?`}
+          />
         </div>
       </div>
 
